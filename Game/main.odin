@@ -1,19 +1,33 @@
+// todo:
+// get imgui working DONE (good enough for now ig)
+// thing system + imgui editor
+// naive voxel engine
+
 package Game
 
 import "core:fmt"
+
 import rl "vendor:raylib"
+
+// ImGui from https://github.com/fredtheking/Odin-Raylib-ImGui-Template (seems to be good for now!)
+import rlimgui "../libs/imgui_impl_raylib"
+import imgui "../libs/odin-imgui"
 
 WINDOW_TITLE :: "Game"
 WINDOW_W :: 1280
 WINDOW_H :: 720
 
+GAME_TICK_RATE :: 60
+AUDIO_SAMPLE_RATE :: 44100
+
 ThingIdx :: distinct u32
+NIL :: ThingIdx(0)
 
 Vec2 :: rl.Vector2
 Vec3 :: rl.Vector3
 
 // LIMITS
-MAX_THINGS :: 4096
+MAX_THINGS :: 8192
 
 main :: proc()
 {
@@ -21,6 +35,12 @@ main :: proc()
 	defer rl.CloseWindow()
 
 	rl.SetTargetFPS(60)
+
+	// Setup ImGui context
+    imgui.CreateContext(nil); defer imgui.DestroyContext(nil)
+
+    // Init ImGui for Raylib
+    rlimgui.init(); defer rlimgui.shutdown()
 
 	camera := rl.Camera3D{position = Vec3{0, 10, 10}, target = Vec3{0, 0, 0}, up = Vec3{0, 1, 0}, fovy = 45, projection = .PERSPECTIVE}
 
@@ -39,6 +59,9 @@ main :: proc()
 		rl.BeginDrawing()
 		rl.ClearBackground(rl.BLACK)
 
+		// ImGui begin (must be called each frame BEFORE using ImGui)
+        rlimgui.begin()
+
 		rl.BeginMode3D(camera);
 
 		rl.DrawGrid(16, 1)
@@ -56,6 +79,10 @@ main :: proc()
 
 		rl.EndMode3D()
 
+		imgui.ShowDemoWindow(nil)
+
+		rlimgui.end()
+
 		rl.EndDrawing()
 	}
 }
@@ -63,21 +90,35 @@ main :: proc()
 GameState :: struct
 {
 	things: [MAX_THINGS] Thing,
+	thingsUsed: [MAX_THINGS]bool,
+	thingsGeneration: [MAX_THINGS]u32,
 
-	drawList: [dynamic]DrawCommand
+	thingsNextFree: [MAX_THINGS]ThingIdx,
+	thingsFirstFree: ThingIdx,
+	thingsLastFree: ThingIdx,
+
+	drawList: [dynamic]DrawCommand // make this use the temp alloc?
 }
 
 Thing :: struct
 {
 	kind: ThingKind,
 
-	name: [24]rune,
-	pos: Vec3,
+	name: [32]rune,
+	icon: u32, // Make this some sort of static resource hash/id?
+	position: Vec3,
+	rotation: Vec3,
 	health: u8,
 
 	using sceneTree: Tree,
 
 	data: ThingData,
+}
+
+ThingRef :: struct
+{
+	idx: ThingIdx,
+	gen: u32,
 }
 
 ThingKind :: enum u16
@@ -86,8 +127,9 @@ ThingKind :: enum u16
 	World,
 	Group,
 	SculptureRecipe,
-	Chip,
 	Player,
+	Chip,
+	NoteChunk,
 }
 
 ThingData :: union
@@ -155,7 +197,7 @@ SculptureRecipeData :: struct
 	smoothBlendAmount: f32,
 
 	// Primitives
-	pos: Vec3,
+	pos: Vec3, // THIS IS ALR IN THING, rotation also for boxes n stuff
 	radius: f32,
 }
 
@@ -175,4 +217,19 @@ ChipKind :: enum
 ChipData :: struct
 {
 	outputInverted: bool,
+}
+
+Note :: struct{} // also pan like in fl!
+
+// Because everything is stored in things, we store notes in chunks (they will be as big as the union allows)
+// without inflating it more. This way a pattern only needs a few child things and not hundreds.
+NoteChunkData :: struct
+{
+	notes: [8]Note // Grow size with union!
+}
+
+PatternData :: struct
+{
+	tempo: f32
+	// Notes will be children.
 }
