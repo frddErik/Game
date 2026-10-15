@@ -1,6 +1,7 @@
 // todo:
 // get imgui working DONE (good enough for now ig)
 // thing system + imgui editor
+// asset system
 // naive voxel engine
 
 package Game
@@ -231,5 +232,5 @@ NoteChunkData :: struct
 PatternData :: struct
 {
 	tempo: f32
-	// Notes will be children.
+	// Note chunks will be children.
 }
