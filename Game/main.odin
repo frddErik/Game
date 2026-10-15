@@ -4,9 +4,13 @@
 // asset system
 // naive voxel engine
 
+// NEXT: Make thing system and asset system tree working. + imgui editor
+
 package Game
 
 import "core:fmt"
+
+// hash stuff
 
 import rl "vendor:raylib"
 
@@ -21,8 +25,8 @@ WINDOW_H :: 720
 GAME_TICK_RATE :: 60
 AUDIO_SAMPLE_RATE :: 44100
 
-ThingIdx :: distinct u32
-NIL :: ThingIdx(0)
+Idx :: distinct u32
+NIL :: Idx(0)
 
 Vec2 :: rl.Vector2
 Vec3 :: rl.Vector3
@@ -80,7 +84,10 @@ main :: proc()
 
 		rl.EndMode3D()
 
-		imgui.ShowDemoWindow(nil)
+		//imgui.ShowDemoWindow(nil)
+
+		imgui.Begin("Menu of Menus")
+		imgui.End()
 
 		rlimgui.end()
 
@@ -94,9 +101,9 @@ GameState :: struct
 	thingsUsed: [MAX_THINGS]bool,
 	thingsGeneration: [MAX_THINGS]u32,
 
-	thingsNextFree: [MAX_THINGS]ThingIdx,
-	thingsFirstFree: ThingIdx,
-	thingsLastFree: ThingIdx,
+	thingsNextFree: [MAX_THINGS]Idx,
+	thingsFirstFree: Idx,
+	thingsLastFree: Idx,
 
 	drawList: [dynamic]DrawCommand // make this use the temp alloc?
 }
@@ -106,10 +113,7 @@ Thing :: struct
 	kind: ThingKind,
 
 	name: [32]rune,
-	icon: u32, // Make this some sort of static resource hash/id?
-	position: Vec3,
-	rotation: Vec3,
-	health: u8,
+	icon: AssetRef,
 
 	using sceneTree: Tree,
 
@@ -118,7 +122,7 @@ Thing :: struct
 
 ThingRef :: struct
 {
-	idx: ThingIdx,
+	idx: Idx,
 	gen: u32,
 }
 
@@ -133,6 +137,12 @@ ThingKind :: enum u16
 	NoteChunk,
 }
 
+Transform :: struct
+{
+	pos: Vec3,
+	rot: Vec3,
+}
+
 ThingData :: union
 {
 	WorldData,
@@ -142,15 +152,15 @@ ThingData :: union
 
 PlayerData :: struct
 {
-	pos: Vec3,
+	using _: Transform
 }
 
-Tree :: struct // types change to u32 to have a more generic tree?
+Tree :: struct
 {
-	parent: ThingIdx,
-	firstChild: ThingIdx,
-	nextSibling: ThingIdx,
-	prevSibling: ThingIdx,
+	parent: Idx,
+	firstChild: Idx,
+	nextSibling: Idx,
+	prevSibling: Idx,
 }
 
 DrawCommand :: union
@@ -234,3 +244,32 @@ PatternData :: struct
 	tempo: f32
 	// Note chunks will be children.
 }
+
+// Asset System
+Asset :: struct
+{
+	name: string,
+	icon: AssetRef,
+	using _: Tree,
+	state: AssetState,
+	data: ^u32, // no clue what type yet maybe slice?
+	size: u32,
+	type: AssetType,
+	hash: [32]u8, // idk make this how long the hash is
+}
+
+AssetType :: enum u8
+{
+	FOLDER,
+	PLAN,
+	SPRITE,
+	SAMPLE,
+}
+
+AssetState :: enum u8
+{
+	UNLOADED,
+	LOADED,
+}
+
+AssetRef :: struct{}
