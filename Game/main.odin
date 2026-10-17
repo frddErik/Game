@@ -8,9 +8,10 @@
 
 package Game
 
+import "core:thread"
 import "core:fmt"
 
-// hash stuff
+import "core:crypto/blake2b"
 
 import rl "vendor:raylib"
 
@@ -32,7 +33,7 @@ Vec2 :: rl.Vector2
 Vec3 :: rl.Vector3
 
 // LIMITS
-MAX_THINGS :: 8192
+MAX_THINGS :: 128
 
 main :: proc()
 {
@@ -47,52 +48,82 @@ main :: proc()
     // Init ImGui for Raylib
     rlimgui.init(); defer rlimgui.shutdown()
 
-	camera := rl.Camera3D{position = Vec3{0, 10, 10}, target = Vec3{0, 0, 0}, up = Vec3{0, 1, 0}, fovy = 45, projection = .PERSPECTIVE}
+    gameState: GameState
+    resetThings(&gameState)
+
+    debugState := DebugState{showDebugMenu = true}
+
+	gameState.camera = rl.Camera3D{position = Vec3{0, 10, 10}, target = Vec3{0, 0, 0}, up = Vec3{0, 1, 0}, fovy = 45, projection = .PERSPECTIVE}
 
 	fmt.println("GameState size:", size_of(GameState) / 1024, "kb!\n")
 	fmt.println("Thing size:", size_of(Thing), "bytes!\n")
 
-	thing: Thing
-	thing.data = PlayerData{}
-	//thing.data.pos = Vec3{3, 3,3}
+	player := addThing(.Player, &gameState)
+	fmt.println(isValidThing(player, &gameState))
+	removeThing(player, &gameState)
+	fmt.println(isValidThing(player, &gameState))
 
 	for !rl.WindowShouldClose()
 	{
 		// hacky camera movement
-		rl.UpdateCamera(&camera, .FIRST_PERSON)
+		rl.UpdateCamera(&gameState.camera, .FIRST_PERSON)
 
-		rl.BeginDrawing()
-		rl.ClearBackground(rl.BLACK)
-
-		// ImGui begin (must be called each frame BEFORE using ImGui)
-        rlimgui.begin()
-
-		rl.BeginMode3D(camera);
-
-		rl.DrawGrid(16, 1)
-
-		for x in 0..<32
+		// toggle debug menu
+		if rl.IsKeyPressed(.I)
 		{
-			for z in 0..<32
-			{
-				//rl.DrawCube(Vec3{f32(x), 0, f32(z)}, 1, 1, 1, rl.RED)
-				rl.DrawCubeWires(Vec3{f32(x), 0, f32(z)}, 1, 1, 1, rl.WHITE)
-			}
+			debugState.showDebugMenu = !debugState.showDebugMenu
 		}
 
-		rl.DrawSphere(Vec3{0,0,0},.5,rl.WHITE)
+		Render(&gameState, &debugState)
+	}
+}
 
-		rl.EndMode3D()
+Render :: proc(gameState: ^GameState, debugState: ^DebugState)
+{
+	rl.BeginDrawing()
+	rl.ClearBackground(rl.BLACK)
 
-		//imgui.ShowDemoWindow(nil)
+	rl.BeginMode3D(gameState.camera);
 
-		imgui.Begin("Menu of Menus")
-		imgui.End()
+	rl.DrawGrid(16, 1)
+
+	for x in 0..<32
+	{
+		for z in 0..<32
+		{
+			//rl.DrawCube(Vec3{f32(x), 0, f32(z)}, 1, 1, 1, rl.RED)
+			rl.DrawCubeWires(Vec3{f32(x), 0, f32(z)}, 1, 1, 1, rl.WHITE)
+		}
+	}
+
+	rl.DrawSphere(Vec3{0,0,0},.5,rl.WHITE)
+
+	rl.EndMode3D()
+
+	//imgui.ShowDemoWindow(nil)
+	if debugState.showDebugMenu
+	{
+		// ImGui begin (must be called each frame BEFORE using ImGui)
+    	rlimgui.begin()
+
+     	if imgui.Begin("Menu of Menus")
+      	{
+       		if imgui.Button("Show General")
+	        {
+		        debugState.showGeneral = !debugState.showGeneral
+	        }
+       	}
+        imgui.End()
+
+        if debugState.showGeneral && imgui.Begin("General")
+        {
+        }
+        imgui.End()
 
 		rlimgui.end()
-
-		rl.EndDrawing()
 	}
+
+	rl.EndDrawing()
 }
 
 GameState :: struct
@@ -105,7 +136,15 @@ GameState :: struct
 	thingsFirstFree: Idx,
 	thingsLastFree: Idx,
 
+	camera: rl.Camera3D,
+
 	drawList: [dynamic]DrawCommand // make this use the temp alloc?
+}
+
+DebugState :: struct
+{
+	showDebugMenu: bool,
+	showGeneral: bool,
 }
 
 Thing :: struct
@@ -115,7 +154,7 @@ Thing :: struct
 	name: [32]rune,
 	icon: AssetRef,
 
-	using sceneTree: Tree,
+	sceneTree: Tree,
 
 	data: ThingData,
 }
@@ -126,11 +165,88 @@ ThingRef :: struct
 	gen: u32,
 }
 
+NIL_THING_REF :: ThingRef{}
+
+resetThings :: proc(gameState: ^GameState)
+{
+	gameState.things = {}
+	for i in 1 ..< MAX_THINGS - 1
+	{
+		gameState.thingsNextFree[i] = Idx(i + 1)
+	}
+	gameState.thingsFirstFree = 1
+	gameState.thingsLastFree = MAX_THINGS - 1
+}
+
+addThing :: proc(kind: ThingKind, gameState: ^GameState) -> ThingRef
+{
+	slot := gameState.thingsFirstFree
+	if slot == NIL
+	{
+		return NIL_THING_REF
+	}
+
+	gameState.thingsFirstFree = gameState.thingsNextFree[slot]
+	if gameState.thingsFirstFree == NIL
+	{
+		gameState.thingsLastFree = NIL
+	}
+
+	gameState.thingsNextFree[slot] = NIL
+
+	gameState.things[slot] = {}
+	gameState.things[slot].kind = kind
+	gameState.thingsUsed[slot] = true
+	gameState.thingsGeneration[slot] += 1
+
+	return ThingRef{idx = slot, gen = gameState.thingsGeneration[slot]}
+}
+
+derefThing :: proc(ref: ThingRef, gameState: GameState) -> Idx
+{
+	if ref.idx > NIL && ref.idx < MAX_THINGS && gameState.thingsUsed[ref.idx] && ref.gen == gameState.thingsGeneration[ref.idx]
+	{
+		return ref.idx
+	}
+	return NIL
+}
+
+getThing :: proc(ref: ThingRef, gameState: ^GameState) -> ^Thing
+{
+	return &gameState.things[derefThing(ref, gameState^)]
+}
+
+isValidThing :: proc(ref: ThingRef, gameState: ^GameState) -> bool
+{
+	return derefThing(ref, gameState^) != NIL
+}
+
+removeThing :: proc(ref: ThingRef, gameState: ^GameState)
+{
+	slot := derefThing(ref, gameState^)
+	if slot == NIL do return
+
+	gameState.thingsUsed[slot] = false
+	gameState.thingsNextFree[slot] = NIL
+
+	if gameState.thingsLastFree != NIL
+	{
+		gameState.thingsNextFree[gameState.thingsLastFree] = slot
+	}
+	else
+	{
+		gameState.thingsFirstFree = slot
+	}
+	gameState.thingsLastFree = slot
+}
+
+
 ThingKind :: enum u16
 {
 	NIL,
 	World,
 	Group,
+	Model,
 	SculptureRecipe,
 	Player,
 	Chip,
@@ -248,14 +364,14 @@ PatternData :: struct
 // Asset System
 Asset :: struct
 {
-	name: string,
+	name: [32]rune,
 	icon: AssetRef,
-	using _: Tree,
+	using sceneTree: Tree,
 	state: AssetState,
 	data: ^u32, // no clue what type yet maybe slice?
 	size: u32,
 	type: AssetType,
-	hash: [32]u8, // idk make this how long the hash is
+	hash: [16]u8,
 }
 
 AssetType :: enum u8
@@ -272,4 +388,10 @@ AssetState :: enum u8
 	LOADED,
 }
 
-AssetRef :: struct{}
+AssetRef :: struct
+{
+	idx : Idx,
+	gen: u32,
+}
+
+derefAsset :: proc(ref: AssetRef){}
