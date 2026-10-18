@@ -112,13 +112,56 @@ Render :: proc(gameState: ^GameState, debugState: ^DebugState)
 	        {
 		        debugState.showGeneral = !debugState.showGeneral
 	        }
+
+			if imgui.Button("Show World Management")
+	        {
+		        debugState.showWorldManagement = !debugState.showWorldManagement
+	        }
+
+			if imgui.Button("Show Asset Management")
+	        {
+		        debugState.showAssetManagement = !debugState.showAssetManagement
+	        }
        	}
         imgui.End()
 
-        if debugState.showGeneral && imgui.Begin("General")
+        if debugState.showGeneral
         {
+        	if imgui.Begin("General")
+	        {
+
+	        }
+			imgui.End()
         }
-        imgui.End()
+
+        if debugState.showWorldManagement
+        {
+        	if imgui.Begin("World Management")
+	        {
+				if imgui.TreeNode("Scene Tree")
+				{
+					if imgui.TreeNode("World")
+					{
+						if imgui.TreeNode("Player")
+						{
+							imgui.TreePop()
+						}
+						imgui.TreePop()
+					}
+					imgui.TreePop()
+				}
+	        }
+         	imgui.End()
+        }
+
+        if debugState.showAssetManagement
+        {
+        	if imgui.Begin("Asset Management")
+	        {
+
+	        }
+         	imgui.End()
+        }
 
 		rlimgui.end()
 	}
@@ -145,6 +188,8 @@ DebugState :: struct
 {
 	showDebugMenu: bool,
 	showGeneral: bool,
+	showWorldManagement: bool,
+	showAssetManagement: bool,
 }
 
 Thing :: struct
@@ -395,3 +440,6 @@ AssetRef :: struct
 }
 
 derefAsset :: proc(ref: AssetRef){}
+
+// Compiler: Code into Plan!
+// this is not efficient at all but for our minimal engine it is enough. We want to have a minimal but functional engine.
