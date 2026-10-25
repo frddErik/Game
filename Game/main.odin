@@ -20,8 +20,8 @@ import rlimgui "../libs/imgui_impl_raylib"
 import imgui "../libs/odin-imgui"
 
 WINDOW_TITLE :: "Game"
-WINDOW_W :: 1280
-WINDOW_H :: 720
+WINDOW_W :: 1920
+WINDOW_H :: 1080
 
 GAME_TICK_RATE :: 60
 AUDIO_SAMPLE_RATE :: 44100
@@ -99,6 +99,12 @@ Render :: proc(gameState: ^GameState, debugState: ^DebugState)
 	rl.DrawSphere(Vec3{0,0,0},.5,rl.WHITE)
 
 	rl.EndMode3D()
+
+	node := addThing(.Node, &gameState^)
+
+	rawnode := getThing(node, gameState)
+
+	//rl.DrawRectangle(rawnode.pos)
 
 	//imgui.ShowDemoWindow(nil)
 	if debugState.showDebugMenu
@@ -296,6 +302,7 @@ ThingKind :: enum u16
 	Player,
 	Chip,
 	NoteChunk,
+	Node,
 }
 
 Transform :: struct
@@ -309,11 +316,18 @@ ThingData :: union
 	WorldData,
 	PlayerData,
 	SculptureRecipeData,
+	NodeData,
 }
 
 PlayerData :: struct
 {
 	using _: Transform
+}
+// node is just for editor, the underlying data is in scene tree. wait or make chip.
+NodeData :: struct
+{
+	using _: Transform,
+	name: string,
 }
 
 Tree :: struct
@@ -406,40 +420,7 @@ PatternData :: struct
 	// Note chunks will be children.
 }
 
-// Asset System
-Asset :: struct
-{
-	name: [32]rune,
-	icon: AssetRef,
-	using sceneTree: Tree,
-	state: AssetState,
-	data: ^u32, // no clue what type yet maybe slice?
-	size: u32,
-	type: AssetType,
-	hash: [16]u8,
-}
 
-AssetType :: enum u8
-{
-	FOLDER,
-	PLAN,
-	SPRITE,
-	SAMPLE,
-}
-
-AssetState :: enum u8
-{
-	UNLOADED,
-	LOADED,
-}
-
-AssetRef :: struct
-{
-	idx : Idx,
-	gen: u32,
-}
-
-derefAsset :: proc(ref: AssetRef){}
 
 // Compiler: Code into Plan!
 // this is not efficient at all but for our minimal engine it is enough. We want to have a minimal but functional engine.
