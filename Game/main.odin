@@ -37,16 +37,22 @@ MAX_THINGS :: 128
 
 main :: proc()
 {
+	rl.SetConfigFlags({.WINDOW_RESIZABLE})
 	rl.InitWindow(WINDOW_W, WINDOW_H, WINDOW_TITLE)
 	defer rl.CloseWindow()
 
-	rl.SetTargetFPS(60)
+	windowIcon := rl.LoadImage("Assets/Textures/UI/squares-unite.png")
+	rl.SetWindowIcon(windowIcon)
+
+	rl.SetTargetFPS(120)
 
 	// Setup ImGui context
     imgui.CreateContext(nil); defer imgui.DestroyContext(nil)
 
     // Init ImGui for Raylib
     rlimgui.init(); defer rlimgui.shutdown()
+
+    styleImgui(imguiScale)
 
     gameState: GameState
     resetThings(&gameState)
@@ -63,6 +69,10 @@ main :: proc()
 	removeThing(player, &gameState)
 	fmt.println(isValidThing(player, &gameState))
 
+	testAssetSystem(&gameState)
+
+	// IMGUI CONFIG
+
 	for !rl.WindowShouldClose()
 	{
 		// hacky camera movement
@@ -74,6 +84,12 @@ main :: proc()
 			debugState.showDebugMenu = !debugState.showDebugMenu
 		}
 
+		if rl.IsKeyPressed(.M)
+		{
+			rl.TakeScreenshot("screenshotnotolight.png")
+		}
+
+
 		Render(&gameState, &debugState)
 	}
 }
@@ -83,6 +99,7 @@ Render :: proc(gameState: ^GameState, debugState: ^DebugState)
 	rl.BeginDrawing()
 	rl.ClearBackground(rl.BLACK)
 
+	/*
 	rl.BeginMode3D(gameState.camera);
 
 	rl.DrawGrid(16, 1)
@@ -99,6 +116,7 @@ Render :: proc(gameState: ^GameState, debugState: ^DebugState)
 	rl.DrawSphere(Vec3{0,0,0},.5,rl.WHITE)
 
 	rl.EndMode3D()
+	*/
 
 	node := addThing(.Node, &gameState^)
 
@@ -128,17 +146,13 @@ Render :: proc(gameState: ^GameState, debugState: ^DebugState)
 	        {
 		        debugState.showAssetManagement = !debugState.showAssetManagement
 	        }
+
+			if imgui.Button("Show Settings")
+	        {
+		        debugState.showSettings = !debugState.showSettings
+	        }
        	}
         imgui.End()
-
-        if debugState.showGeneral
-        {
-        	if imgui.Begin("General")
-	        {
-
-	        }
-			imgui.End()
-        }
 
         if debugState.showWorldManagement
         {
@@ -169,25 +183,25 @@ Render :: proc(gameState: ^GameState, debugState: ^DebugState)
          	imgui.End()
         }
 
+        if debugState.showSettings
+        {
+        	if imgui.Begin("Settings")
+	        {
+				imgui.SliderFloat("ImGui Size", &imguiScale, 0.0, 8.0)
+
+				if imgui.Button("Doesn't work yet, sorry!")
+				{
+				}
+	        }
+         	imgui.End()
+        }
+
+        drawDebugMenuBar()
+
 		rlimgui.end()
 	}
 
 	rl.EndDrawing()
-}
-
-GameState :: struct
-{
-	things: [MAX_THINGS] Thing,
-	thingsUsed: [MAX_THINGS]bool,
-	thingsGeneration: [MAX_THINGS]u32,
-
-	thingsNextFree: [MAX_THINGS]Idx,
-	thingsFirstFree: Idx,
-	thingsLastFree: Idx,
-
-	camera: rl.Camera3D,
-
-	drawList: [dynamic]DrawCommand // make this use the temp alloc?
 }
 
 DebugState :: struct
@@ -196,6 +210,7 @@ DebugState :: struct
 	showGeneral: bool,
 	showWorldManagement: bool,
 	showAssetManagement: bool,
+	showSettings: bool,
 }
 
 Thing :: struct
@@ -409,6 +424,8 @@ Note :: struct{} // also pan like in fl!
 
 // Because everything is stored in things, we store notes in chunks (they will be as big as the union allows)
 // without inflating it more. This way a pattern only needs a few child things and not hundreds.
+
+// LOWK DONT POLLUTE THE SCENE TREE WITH NOTE DATA, LETS JUST MAKE AN ARRAY WITH NOTE CHUNKS! MAYBE
 NoteChunkData :: struct
 {
 	notes: [8]Note // Grow size with union!
