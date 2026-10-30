@@ -26,6 +26,7 @@ styleImgui :: proc(scale: f32)
 	}
 	else
 	{
+		// LOG WARNING: unable to load font.
 		io.FontGlobalScale = scale
 	}
 	imgui.Style_ScaleAllSizes(imgui.GetStyle(), scale)
@@ -40,14 +41,11 @@ drawDebugMenuBar :: proc()
         return
     }
 
-    if imgui.BeginMenu("General")
+    if imgui.BeginMenu("Game")
     {
-    	if imgui.MenuItem("Open File")
-	    {
-	    }
-
     	if imgui.MenuItem("About")
 	    {
+			debugState.showAbout = !debugState.showAbout
 	    }
 
 		imgui.PushStyleColorImVec4(imgui.Col.Text, colorToImVec4(ALARMING_RED))
@@ -60,34 +58,44 @@ drawDebugMenuBar :: proc()
 		imgui.EndMenu()
     }
 
-    if imgui.BeginMenu("Colors!")
+    if imgui.BeginMenu("View")
     {
-    	imgui.PushStyleColorImVec4(imgui.Col.Text, colorToImVec4(AQUA_BLUE))
-   		if imgui.MenuItem("Beautiful")
-	    {
-	    }
-		imgui.PopStyleColor()
+    	if imgui.MenuItem("X")
+     	{
+      	}
 
-		if imgui.MenuItem("White again...")
-		{
-		}
-
-		imgui.EndMenu()
+     	imgui.EndMenu()
     }
 
-    imgui.PushStyleColorImVec4(imgui.Col.Text, colorToImVec4(SILVER))
+    //imgui.PushStyleColorImVec4(imgui.Col.Text, colorToImVec4(SILVER))
     if imgui.BeginMenu("Settings")
     {
    		if imgui.MenuItem("Open")
 	    {
-			imgui.Button("SIZE")
+			debugState.drawSettings = !debugState.drawSettings
 	    }
 
 		imgui.EndMenu()
     }
-    imgui.PopStyleColor()
+    //imgui.PopStyleColor()
 
     imgui.EndMainMenuBar()
 }
 
-drawSettings :: proc(){}
+drawSettings :: proc()
+{
+	if debugState.drawSettings
+    {
+        if imgui.Begin("Settings", &debugState.drawSettings)
+        {
+       		imgui.ColorPicker4("Sky Color", &SKY_COLOR)
+        }
+    imgui.End()
+    }
+}
+
+
+drawDebugUi :: proc()
+{
+	drawSettings()
+}
