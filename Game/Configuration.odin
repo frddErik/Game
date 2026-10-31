@@ -1,0 +1,11 @@
+package Game
+
+GAME_NAME :: "Game"
+
+WINDOW_TITLE :: "Game"
+
+GAME_TICK_RATE :: 60
+AUDIO_SAMPLE_RATE :: 44100
+
+// LIMITS
+MAX_THINGS :: 128

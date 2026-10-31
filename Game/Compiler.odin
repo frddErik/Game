@@ -4,3 +4,5 @@ package Game
 
 // Tokenizing
 Token :: struct {}
+
+// Test with midi number to frequency equation.

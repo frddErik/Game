@@ -22,27 +22,18 @@ import rl "vendor:raylib"
 import rlimgui "../libs/imgui_impl_raylib"
 import imgui "../libs/odin-imgui"
 
-WINDOW_TITLE :: "Game"
+
 WINDOW_W :: 1920
 WINDOW_H :: 1080
 
-GAME_TICK_RATE :: 60
-AUDIO_SAMPLE_RATE :: 44100
 
-Idx :: distinct u32
 NIL :: Idx(0)
-
-Vec2 :: rl.Vector2
-Vec3 :: rl.Vector3
-
-// LIMITS
-MAX_THINGS :: 128
 
 font: rl.Font
 
 debugState := DebugState{showDebugMenu = true}
 
-main :: proc()
+mainold :: proc()
 {
 	rl.SetConfigFlags({.WINDOW_RESIZABLE})
 	rl.InitWindow(WINDOW_W, WINDOW_H, WINDOW_TITLE)
@@ -67,7 +58,9 @@ main :: proc()
     resetThings(&gameState)
 
 
-	gameState.camera = rl.Camera3D{position = Vec3{0, 10, 10}, target = Vec3{0, 0, 0}, up = Vec3{0, 1, 0}, fovy = 45, projection = .PERSPECTIVE}
+	gameState.camera = rl.Camera3D{position = Vec3{50, 50, 50}, target = Vec3{0, 12, 0}, up = Vec3{0, 1, 0}, fovy = 45, projection = .PERSPECTIVE}
+
+	model := rl.LoadModel("C:/Users/devco/Downloads/betterarcade.glb")
 
 	fmt.println("GameState size:", size_of(GameState) / 1024, "kb!\n")
 	fmt.println("Thing size:", size_of(Thing), "bytes!\n")
@@ -98,7 +91,14 @@ main :: proc()
 		}
 
 
-		Render(&gameState, &debugState)
+		//Render(&gameState, &debugState)
+		rl.BeginDrawing()
+		rl.ClearBackground(rl.BLACK)
+		rl.BeginMode3D(gameState.camera)
+		rl.DrawModel(model, Vec3{0,0,0},1,rl.WHITE)
+		rl.DrawSphere(Vec3{0,0,0},.5,rl.WHITE)
+		rl.EndMode3D()
+		rl.EndDrawing()
 	}
 }
 
@@ -107,7 +107,7 @@ Render :: proc(gameState: ^GameState, debugState: ^DebugState)
 	rl.BeginDrawing()
 	rl.ClearBackground(rl.Color{u8(clamp(SKY_COLOR.r*256, 0, 255)), u8(clamp(SKY_COLOR.g*256, 0, 255)), u8(clamp(SKY_COLOR.b*256, 0, 255)), u8(clamp(SKY_COLOR.a*256, 0, 255))})
 
-	/*
+
 	rl.BeginMode3D(gameState.camera);
 
 	rl.DrawGrid(16, 1)
@@ -124,7 +124,7 @@ Render :: proc(gameState: ^GameState, debugState: ^DebugState)
 	rl.DrawSphere(Vec3{0,0,0},.5,rl.WHITE)
 
 	rl.EndMode3D()
-	*/
+
 
 	node := addThing(.Node, &gameState^)
 

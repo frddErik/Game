@@ -2,10 +2,13 @@ package Game
 
 Wire :: struct{}
 
-// Keyframe
+// Wire: 1 Game-Rate Signal
+// Wire Bundle: Several Game-Rate Signals
+// Cable: 1 Audio-Rate Signal
+// Cable Bundle: Several Audio-Rate Signals
+// Mixed Bundle: Mix
+
+// Keyframe is invisible wire/cable.
 // how do we do ports?
 
 // FFT
-
-// Wire / Cable
-// Stream / Jolt (mayb other name? cuz these are also streams but at game tick rate instead of audio rate.)

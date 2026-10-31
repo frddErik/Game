@@ -1,16 +1,17 @@
 package Game
 
 import "core:os"
-
-// In the future, I want some sort of VCS. Does the resource system have to take care of this? Or the fs? Idk, look into it in the future.
+import "core:hash/xxhash"
 
 // .barc - blob archive
 // .bmap - fs blob map
-// .farc - blarc + farc in one file
+// .farc - blarc + farc in one file, container for sharing/archiving so read-only. Has to get extracted into .barc and .bmap for use.
 
 BARC_REVISION :: 0
 BMAP_REVISION :: 0
 FARC_REVISION :: 0
+
+Hash :: [16]byte
 
 // BARC - Blob Archive
 Blob :: struct
@@ -33,6 +34,12 @@ BarcFooter :: struct #packed
 	magic: [4]byte,
 }
 
+hashBlob :: proc(data: []byte) -> Hash
+{
+	return transmute(Hash)(xxhash.XXH3_128_default(data))
+}
+
+/*
 writeBarc :: proc(file: os.File, blobs: ^[]Blob)
 {
 	blobCount := u32(len(blobs^))
@@ -49,6 +56,23 @@ writeBarc :: proc(file: os.File, blobs: ^[]Blob)
 
 	// Finally, write data buffer, then metadata buffer, then footer. Barc done :)
 }
+*/
+
+openBarc :: proc(){}
+
+closeBarc :: proc(){}
+
+appendBarc :: proc(){}
+
+removeBarc :: proc(){}
+
+readBarc :: proc(){} // hash in, data slice out?
+
+saveBarc :: proc(){}
+
+compactBarc :: proc(){}
+
+// !!!!!!!!!!!!!!TO USE BARC, LOAD INDEX INTO HASHMAP HASH->OFFSET!""""""
 
 
 // Hmm idk about ts how does it connect to assets?
@@ -58,6 +82,8 @@ writeBarc :: proc(file: os.File, blobs: ^[]Blob)
 // Like we load all MapElements of Bmap into Assets array intrusive. We have one global World current loaded assets fs.
 // But then we can also do several fs's like one fs (aka intrusive array of Asset structs) per Palettes etc. For easier access you
 // can like make a palette (aka folder but it only references the assets) for easier access. This is very confusing ik, we'll see!
+//
+// HAS TO BE CONNECTED TO RESOURCE/ASSET SYSTEM?
 MapElement :: struct
 {
 	hash: [16]byte,
