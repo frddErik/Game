@@ -14,15 +14,9 @@ FARC_REVISION :: 0
 Hash :: [16]byte
 
 // BARC - Blob Archive
-Blob :: struct
+BarcEntry :: struct #packed
 {
-	data: []byte,
-	indexEntry: IndexEntry,
-}
-
-IndexEntry :: struct #packed
-{
-	hash: [16]byte,
+	hash: Hash,
 	offset: u64,
 	size: u32,
 }
@@ -33,6 +27,9 @@ BarcFooter :: struct #packed
 	elementCount: u32,
 	magic: [4]byte,
 }
+
+Barc :: struct
+{}
 
 hashBlob :: proc(data: []byte) -> Hash
 {

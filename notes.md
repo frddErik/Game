@@ -20,3 +20,7 @@ ASSETS ARE RUNTIME AND RESOURCES ARE ON FILE!!!!!!
 maybe unify resourcesystem.odin and filearchive.odin?
 
 What will we use for textures? QOI??
+
+Audio:
+Opus for lossy.
+For lossless???  FLAC, wavpack...?

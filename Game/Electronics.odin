@@ -1,6 +1,12 @@
 package Game
 
-Wire :: struct{}
+Wire :: struct
+{
+	sourceThing: ThingRef,
+	sourcePort: u8,
+	destinationThing: ThingRef,
+	destinationPort: u8,
+}
 
 // Wire: 1 Game-Rate Signal
 // Wire Bundle: Several Game-Rate Signals
